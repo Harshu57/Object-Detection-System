@@ -10,6 +10,7 @@ from typing import List, Tuple, Optional, Union, Dict, Any
 from ultralytics import YOLO
 import config
 import utils
+from .emotion_detector import create_emotion_detector
 
 class YOLOv8Detector:
     """
@@ -23,7 +24,9 @@ class YOLOv8Detector:
         nms_threshold: float = config.NMS_THRESHOLD,
         ensemble_models: Optional[List[str]] = None,
         use_tta: bool = False,
-        calibration_factor: float = 1.0
+        calibration_factor: float = 1.0,
+        enable_emotion_detection: bool = True,
+        advanced_emotion: bool = True
     ):
         """
         Initialize the YOLOv8 detector with improved accuracy features.
@@ -35,11 +38,14 @@ class YOLOv8Detector:
             ensemble_models: List of additional models for ensemble detection
             use_tta: Whether to use Test Time Augmentation
             calibration_factor: Confidence calibration factor
+            enable_emotion_detection: Whether to enable emotion detection
+            advanced_emotion: Whether to use advanced emotion detection
         """
         self.confidence_threshold = confidence_threshold
         self.nms_threshold = nms_threshold
         self.use_tta = use_tta
         self.calibration_factor = calibration_factor
+        self.enable_emotion_detection = enable_emotion_detection
         
         # Set default model path if not provided
         if model_path is None:
@@ -59,6 +65,16 @@ class YOLOv8Detector:
                 except Exception as e:
                     print(f"Failed to load ensemble model {model_path}: {e}")
         
+        # Initialize emotion detector if enabled
+        self.emotion_detector = None
+        if self.enable_emotion_detection:
+            try:
+                self.emotion_detector = create_emotion_detector(advanced=advanced_emotion)
+                print("Emotion detector initialized successfully")
+            except Exception as e:
+                print(f"Failed to initialize emotion detector: {e}")
+                self.emotion_detector = None
+        
         # Store class names
         self.class_names = self.model.names if hasattr(self.model, 'names') else {}
         
@@ -67,6 +83,7 @@ class YOLOv8Detector:
         print(f"Ensemble models: {len(self.ensemble_models)}")
         print(f"TTA enabled: {self.use_tta}")
         print(f"Calibration factor: {self.calibration_factor}")
+        print(f"Emotion detection enabled: {self.emotion_detector is not None}")
     
     def _load_model(self, model_path: Union[str, Path]) -> YOLO:
         """
@@ -421,6 +438,16 @@ class YOLOv8Detector:
         # Process results and draw bounding boxes
         annotated_image = image.copy()
         
+        # Perform emotion detection if enabled
+        emotion_results = []
+        if self.emotion_detector is not None:
+            try:
+                emotion_results = self.emotion_detector.detect_emotions(image)
+                if emotion_results:
+                    annotated_image = self.emotion_detector.draw_emotion_results(annotated_image, emotion_results)
+            except Exception as e:
+                print(f"Emotion detection failed: {e}")
+        
         for detection in detections:
             bbox = detection["bbox"]
             class_name = detection["class_name"]
@@ -464,6 +491,12 @@ class YOLOv8Detector:
                 "tta_enabled": self.use_tta,
                 "calibration_factor": self.calibration_factor,
                 "improved_accuracy": use_improved_accuracy
+            },
+            "emotion_detection": {
+                "enabled": self.emotion_detector is not None,
+                "results": emotion_results,
+                "total_faces": len(emotion_results),
+                "summary": self.emotion_detector.get_emotion_summary(emotion_results) if self.emotion_detector else {}
             }
         }
     
@@ -663,6 +696,21 @@ class YOLOv8Detector:
             
             # Process results
             annotated_frame = frame.copy()
+            
+            # Perform emotion detection if enabled
+            if self.emotion_detector is not None:
+                try:
+                    emotion_results = self.emotion_detector.detect_emotions(frame)
+                    if emotion_results:
+                        annotated_frame = self.emotion_detector.draw_emotion_results(annotated_frame, emotion_results)
+                        
+                        # Print emotion summary every 30 frames
+                        if frame_count % 30 == 0:
+                            summary = self.emotion_detector.get_emotion_summary(emotion_results)
+                            if summary['total_faces'] > 0:
+                                print(f"Emotions detected: {summary['dominant_emotion']} (Mood: {summary['dominant_mood']})")
+                except Exception as e:
+                    pass  # Don't stop webcam for emotion detection errors
             
             for result in results:
                 boxes = result.boxes

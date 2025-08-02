@@ -1,15 +1,31 @@
 # YOLOv8 Object Detection System
 
-A modular and comprehensive object detection system built with YOLOv8, supporting image, video, and webcam detection with customizable configurations.
+A comprehensive object detection system using YOLOv8 with advanced features including **human emotion and mood detection**.
 
-## 🚀 Features
+## 🌟 Features
 
-- **Multi-format Support**: Process images (JPG, PNG, BMP, TIFF, WebP) and videos (MP4, AVI, MOV, MKV, WMV, FLV)
-- **Real-time Detection**: Webcam support for live object detection
-- **Batch Processing**: Process entire directories of images/videos
-- **Customizable**: Adjustable confidence thresholds, NMS settings, and model selection
-- **Modular Design**: Clean separation of concerns with configurable components
-- **CLI Interface**: Easy-to-use command-line interface with comprehensive options
+### Object Detection
+- **Real-time detection** using webcam
+- **Image and video processing** with bounding boxes
+- **Batch processing** for multiple files
+- **Multiple model support** (YOLOv8n, YOLOv8s, YOLOv8m, YOLOv8l, YOLOv8x)
+- **Ensemble detection** for improved accuracy
+- **Test Time Augmentation (TTA)** for better results
+- **Confidence calibration** for accurate probability estimates
+
+### 🎭 Human Emotion Detection
+- **Facial expression analysis** for emotion recognition
+- **7 emotion categories**: Happy, Sad, Angry, Fear, Surprise, Disgust, Neutral
+- **Mood classification**: Positive, Negative, Calm, Excited, Anxious
+- **Real-time emotion tracking** in webcam mode
+- **Advanced emotion analysis** with multiple feature extraction
+- **Basic and advanced detection modes**
+
+### Accuracy Improvements
+- **Ensemble models** for better detection accuracy
+- **Test Time Augmentation** for improved robustness
+- **Confidence calibration** for better probability estimates
+- **Custom model training** capabilities
 
 ## 📁 Project Structure
 
@@ -49,6 +65,50 @@ On first run, the system will automatically download the YOLOv8n model if not pr
 
 ```bash
 python app.py --help
+```
+
+## 🚀 Quick Start
+
+### Basic Object Detection
+```bash
+# Detect objects in an image
+python app.py --input data/image.jpg --output outputs/detected.jpg
+
+# Real-time webcam detection
+python app.py --webcam
+
+# Process video file
+python app.py --input data/video.mp4 --output outputs/detected_video.mp4
+```
+
+### 🎭 Emotion Detection
+```bash
+# Real-time emotion detection with webcam
+python app.py --webcam --tta
+
+# Emotion detection on image
+python app.py --input data/face.jpg --tta
+
+# Basic emotion detection (faster)
+python app.py --webcam --basic-emotion
+
+# Disable emotion detection
+python app.py --webcam --no-emotion
+
+# Dedicated emotion demo
+python emotion_demo.py
+```
+
+### Advanced Features
+```bash
+# Ensemble detection with multiple models
+python app.py --input image.jpg --ensemble-models yolov8s.pt yolov8m.pt --tta
+
+# High accuracy mode
+python app.py --input image.jpg --model yolov8x.pt --tta --calibration-factor 1.2
+
+# Custom training
+python train_model.py
 ```
 
 ## 🎯 Usage

@@ -41,6 +41,15 @@ Examples:
 
   # Use custom model and confidence threshold
   python app.py --input data/image.jpg --model models/yolov8s.pt --conf 0.5
+
+  # Enable emotion detection for human faces
+  python app.py --webcam --tta
+
+  # Use basic emotion detection
+  python app.py --webcam --basic-emotion
+
+  # Disable emotion detection
+  python app.py --webcam --no-emotion
         """
     )
     
@@ -114,6 +123,18 @@ Examples:
         "--no-improved-accuracy",
         action="store_true",
         help="Disable improved accuracy features"
+    )
+    
+    # Emotion detection settings
+    parser.add_argument(
+        "--no-emotion",
+        action="store_true",
+        help="Disable emotion detection for human faces"
+    )
+    parser.add_argument(
+        "--basic-emotion",
+        action="store_true",
+        help="Use basic emotion detection instead of advanced"
     )
     
     # Webcam settings
@@ -201,7 +222,9 @@ def main():
             nms_threshold=args.nms,
             ensemble_models=args.ensemble_models,
             use_tta=args.tta,
-            calibration_factor=args.calibration_factor
+            calibration_factor=args.calibration_factor,
+            enable_emotion_detection=not args.no_emotion,
+            advanced_emotion=not args.basic_emotion
         )
         print("Detector initialized successfully!")
     except Exception as e:
