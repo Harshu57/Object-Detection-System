@@ -1,5 +1,5 @@
 """
-YOLOv8 Object Detector Implementation
+YOLOv11 Object Detector Implementation
 """
 
 import cv2
@@ -10,11 +10,10 @@ from typing import List, Tuple, Optional, Union, Dict, Any
 from ultralytics import YOLO
 import config
 import utils
-from .emotion_detector import create_emotion_detector
 
-class YOLOv8Detector:
+class YOLOv11Detector:
     """
-    YOLOv8 Object Detector class for processing images and videos.
+    YOLOv11 Object Detector class for processing images and videos.
     """
     
     def __init__(
@@ -24,28 +23,23 @@ class YOLOv8Detector:
         nms_threshold: float = config.NMS_THRESHOLD,
         ensemble_models: Optional[List[str]] = None,
         use_tta: bool = False,
-        calibration_factor: float = 1.0,
-        enable_emotion_detection: bool = True,
-        advanced_emotion: bool = True
+        calibration_factor: float = 1.0
     ):
         """
-        Initialize the YOLOv8 detector with improved accuracy features.
+        Initialize the YOLOv11 detector with improved accuracy features.
         
         Args:
-            model_path: Path to YOLOv8 model weights
+            model_path: Path to YOLOv11 model weights
             confidence_threshold: Minimum confidence for detection
             nms_threshold: Non-maximum suppression threshold
             ensemble_models: List of additional models for ensemble detection
             use_tta: Whether to use Test Time Augmentation
             calibration_factor: Confidence calibration factor
-            enable_emotion_detection: Whether to enable emotion detection
-            advanced_emotion: Whether to use advanced emotion detection
         """
         self.confidence_threshold = confidence_threshold
         self.nms_threshold = nms_threshold
         self.use_tta = use_tta
         self.calibration_factor = calibration_factor
-        self.enable_emotion_detection = enable_emotion_detection
         
         # Set default model path if not provided
         if model_path is None:
@@ -65,29 +59,19 @@ class YOLOv8Detector:
                 except Exception as e:
                     print(f"Failed to load ensemble model {model_path}: {e}")
         
-        # Initialize emotion detector if enabled
-        self.emotion_detector = None
-        if self.enable_emotion_detection:
-            try:
-                self.emotion_detector = create_emotion_detector(advanced=advanced_emotion)
-                print("Emotion detector initialized successfully")
-            except Exception as e:
-                print(f"Failed to initialize emotion detector: {e}")
-                self.emotion_detector = None
-        
         # Store class names
         self.class_names = self.model.names if hasattr(self.model, 'names') else {}
         
-        print(f"YOLOv8 model loaded successfully from {model_path}")
+        print(f"YOLOv11 model loaded successfully from {model_path}")
         print(f"Available classes: {len(self.class_names)}")
         print(f"Ensemble models: {len(self.ensemble_models)}")
         print(f"TTA enabled: {self.use_tta}")
         print(f"Calibration factor: {self.calibration_factor}")
-        print(f"Emotion detection enabled: {self.emotion_detector is not None}")
+        print("Detector initialized successfully!")
     
     def _load_model(self, model_path: Union[str, Path]) -> YOLO:
         """
-        Load YOLOv8 model from path.
+        Load YOLOv11 model from path with fallback to YOLOv8.
         
         Args:
             model_path: Path to model weights
@@ -96,16 +80,30 @@ class YOLOv8Detector:
             Loaded YOLO model
         """
         try:
+            # First try to load the specified model
             model = YOLO(str(model_path))
+            print(f"Successfully loaded model from {model_path}")
             return model
         except Exception as e:
             print(f"Error loading model from {model_path}: {e}")
-            print("Attempting to download default YOLOv8n model...")
+            
+            # Try to download YOLOv11 model
+            print("Attempting to download YOLOv11n model...")
             try:
-                model = YOLO("yolov8n.pt")
+                model = YOLO("yolov11n.pt")
+                print("Successfully downloaded and loaded YOLOv11n model")
                 return model
             except Exception as e2:
-                raise RuntimeError(f"Failed to load model: {e2}")
+                print(f"Failed to download YOLOv11n: {e2}")
+                
+                # Fallback to YOLOv8
+                print("Falling back to YOLOv8n model...")
+                try:
+                    model = YOLO("yolov8n.pt")
+                    print("Successfully loaded YOLOv8n model as fallback")
+                    return model
+                except Exception as e3:
+                    raise RuntimeError(f"Failed to load any model: {e3}")
     
     def _apply_confidence_calibration(self, confidence: float) -> float:
         """
@@ -438,16 +436,6 @@ class YOLOv8Detector:
         # Process results and draw bounding boxes
         annotated_image = image.copy()
         
-        # Perform emotion detection if enabled
-        emotion_results = []
-        if self.emotion_detector is not None:
-            try:
-                emotion_results = self.emotion_detector.detect_emotions(image)
-                if emotion_results:
-                    annotated_image = self.emotion_detector.draw_emotion_results(annotated_image, emotion_results)
-            except Exception as e:
-                print(f"Emotion detection failed: {e}")
-        
         for detection in detections:
             bbox = detection["bbox"]
             class_name = detection["class_name"]
@@ -475,7 +463,7 @@ class YOLOv8Detector:
         
         # Show result if requested
         if show_result:
-            cv2.imshow("YOLOv8 Detection", annotated_image)
+            cv2.imshow("YOLOv11 Detection", annotated_image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         
@@ -491,12 +479,6 @@ class YOLOv8Detector:
                 "tta_enabled": self.use_tta,
                 "calibration_factor": self.calibration_factor,
                 "improved_accuracy": use_improved_accuracy
-            },
-            "emotion_detection": {
-                "enabled": self.emotion_detector is not None,
-                "results": emotion_results,
-                "total_faces": len(emotion_results),
-                "summary": self.emotion_detector.get_emotion_summary(emotion_results) if self.emotion_detector else {}
             }
         }
     
@@ -602,7 +584,7 @@ class YOLOv8Detector:
             
             # Show frame if requested
             if show_result:
-                cv2.imshow("YOLOv8 Video Detection", annotated_frame)
+                cv2.imshow("YOLOv11 Video Detection", annotated_frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
             
@@ -638,15 +620,19 @@ class YOLOv8Detector:
         self,
         webcam_index: int = config.WEBCAM_INDEX,
         output_path: Optional[Union[str, Path]] = None,
-        fullscreen: bool = False
+        fullscreen: bool = False,
+        target_fps: int = 30,
+        frame_skip: int = 1
     ) -> None:
         """
-        Perform real-time object detection using webcam.
+        Perform real-time object detection using webcam with YOLOv11 optimizations.
         
         Args:
             webcam_index: Webcam device index
             output_path: Path to save output video (optional)
             fullscreen: Whether to display in full screen mode
+            target_fps: Target FPS for processing
+            frame_skip: Number of frames to skip between detections
         """
         # Open webcam
         cap = cv2.VideoCapture(webcam_index)
@@ -654,9 +640,11 @@ class YOLOv8Detector:
             print(f"Error: Could not open webcam at index {webcam_index}")
             return
         
-        # Set webcam properties
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.WEBCAM_WIDTH)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.WEBCAM_HEIGHT)
+        # Set webcam properties for better performance
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Reduced resolution for better FPS
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        cap.set(cv2.CAP_PROP_FPS, target_fps)
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer size
         
         # Get actual frame dimensions
         frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -670,15 +658,27 @@ class YOLOv8Detector:
             )
         
         # Create window and set properties
-        window_name = "YOLOv8 Webcam Detection"
+        window_name = "YOLOv11 Webcam Detection"
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
         
         if fullscreen:
             # Set window to full screen
             cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-            print("Full screen mode enabled. Press 'q' to quit or 'f' to toggle fullscreen.")
+            print("Full screen mode enabled. Press 'q' to quit, 'f' to toggle fullscreen, 's' for screenshot.")
         else:
-            print("Webcam detection started. Press 'q' to quit or 'f' to toggle fullscreen.")
+            print("Webcam detection started. Press 'q' to quit, 'f' to toggle fullscreen, 's' for screenshot.")
+        
+        # Performance tracking with improved FPS calculation
+        frame_times = []
+        fps_counter = 0
+        fps_start_time = time.time()
+        fps = 0
+        last_detection_time = 0
+        
+        # Frame processing variables
+        frame_count = 0
+        detection_frame = None
+        last_detections = []
         
         while True:
             ret, frame = cap.read()
@@ -686,31 +686,72 @@ class YOLOv8Detector:
                 print("Error: Could not read frame from webcam")
                 break
             
-            # Perform detection on frame
+            frame_count += 1
+            current_time = time.time()
+            
+            # Skip frames to maintain target FPS
+            if frame_count % frame_skip != 0:
+                # Display last detection result without new inference
+                if detection_frame is not None:
+                    annotated_frame = detection_frame.copy()
+                    
+                    # Add performance overlay
+                    cv2.putText(
+                        annotated_frame,
+                        f"FPS: {fps:.1f} | Detections: {len(last_detections)} | Model: YOLOv11",
+                        (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.7,
+                        (0, 255, 0),
+                        2
+                    )
+                    
+                    # Add instructions overlay
+                    cv2.putText(
+                        annotated_frame,
+                        "Press 'q' to quit, 'f' for fullscreen, 's' for screenshot",
+                        (10, frame_height - 20),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5,
+                        (255, 255, 255),
+                        1
+                    )
+                    
+                    cv2.imshow(window_name, annotated_frame)
+                    key = cv2.waitKey(1) & 0xFF
+                    if key == ord('q'):
+                        break
+                    elif key == ord('f'):
+                        fullscreen = not fullscreen
+                        if fullscreen:
+                            cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+                            print("Full screen mode enabled")
+                        else:
+                            cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
+                            print("Full screen mode disabled")
+                    elif key == ord('s'):
+                        screenshot_path = f"webcam_screenshot_{int(time.time())}.jpg"
+                        cv2.imwrite(screenshot_path, annotated_frame)
+                        print(f"Screenshot saved: {screenshot_path}")
+                continue
+            
+            # Start timing for FPS calculation
+            frame_start_time = time.time()
+            
+            # Perform detection on frame with YOLOv11 optimizations
             results = self.model(
                 frame,
                 conf=self.confidence_threshold,
                 iou=self.nms_threshold,
-                max_det=config.MAX_DETECTIONS
+                max_det=config.MAX_DETECTIONS,
+                verbose=False,  # Reduce output noise
+                stream=True  # Enable streaming for better performance
             )
             
             # Process results
             annotated_frame = frame.copy()
-            
-            # Perform emotion detection if enabled
-            if self.emotion_detector is not None:
-                try:
-                    emotion_results = self.emotion_detector.detect_emotions(frame)
-                    if emotion_results:
-                        annotated_frame = self.emotion_detector.draw_emotion_results(annotated_frame, emotion_results)
-                        
-                        # Print emotion summary every 30 frames
-                        if frame_count % 30 == 0:
-                            summary = self.emotion_detector.get_emotion_summary(emotion_results)
-                            if summary['total_faces'] > 0:
-                                print(f"Emotions detected: {summary['dominant_emotion']} (Mood: {summary['dominant_mood']})")
-                except Exception as e:
-                    pass  # Don't stop webcam for emotion detection errors
+            detections_count = 0
+            current_detections = []
             
             for result in results:
                 boxes = result.boxes
@@ -722,6 +763,10 @@ class YOLOv8Detector:
                         # Get class and confidence
                         class_id = int(box.cls[0].cpu().numpy())
                         confidence = float(box.conf[0].cpu().numpy())
+                        
+                        # Apply confidence calibration if enabled
+                        if self.calibration_factor != 1.0:
+                            confidence = self._apply_confidence_calibration(confidence)
                         
                         # Get class name
                         class_name = self.class_names.get(class_id, f"class_{class_id}")
@@ -738,6 +783,62 @@ class YOLOv8Detector:
                             color,
                             class_id
                         )
+                        detections_count += 1
+                        current_detections.append({
+                            'class': class_name,
+                            'confidence': confidence,
+                            'bbox': [x1, y1, x2, y2]
+                        })
+            
+            # Store detection results for skipped frames
+            detection_frame = annotated_frame.copy()
+            last_detections = current_detections
+            
+            # Calculate FPS with improved accuracy
+            frame_time = time.time() - frame_start_time
+            frame_times.append(frame_time)
+            
+            # Keep only last 30 frame times for FPS calculation
+            if len(frame_times) > 30:
+                frame_times.pop(0)
+            
+            # Calculate average FPS
+            if len(frame_times) > 0:
+                avg_frame_time = sum(frame_times) / len(frame_times)
+                fps = 1.0 / avg_frame_time if avg_frame_time > 0 else 0
+            
+            # Add performance overlay with more detailed info
+            cv2.putText(
+                annotated_frame,
+                f"FPS: {fps:.1f} | Detections: {detections_count} | Model: YOLOv11",
+                (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2
+            )
+            
+            # Add frame time info
+            cv2.putText(
+                annotated_frame,
+                f"Frame Time: {frame_time*1000:.1f}ms | Resolution: {frame_width}x{frame_height}",
+                (10, 60),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 0),
+                1
+            )
+            
+            # Add instructions overlay
+            cv2.putText(
+                annotated_frame,
+                "Press 'q' to quit, 'f' for fullscreen, 's' for screenshot",
+                (10, frame_height - 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                (255, 255, 255),
+                1
+            )
             
             # Write frame to output video
             if video_writer is not None:
@@ -759,13 +860,18 @@ class YOLOv8Detector:
                 else:
                     cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
                     print("Full screen mode disabled")
+            elif key == ord('s'):
+                # Save screenshot
+                screenshot_path = f"webcam_screenshot_{int(time.time())}.jpg"
+                cv2.imwrite(screenshot_path, annotated_frame)
+                print(f"Screenshot saved: {screenshot_path}")
         
         # Cleanup
         cap.release()
         if video_writer is not None:
             video_writer.release()
         cv2.destroyAllWindows()
-        print("Webcam detection stopped.")
+        print(f"Webcam detection stopped. Average FPS: {fps:.1f}")
     
     def batch_detect_images(
         self,

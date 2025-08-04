@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-YOLOv8 Object Detection System - Main Application
-A modular object detection system using YOLOv8 for images, videos, and webcam.
+YOLOv11 Object Detection System - Main Application
+A modular object detection system using YOLOv11 for images, videos, and webcam.
 """
 
 import argparse
@@ -12,7 +12,7 @@ from typing import Optional
 # Add src directory to path for imports
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from src.detector import YOLOv8Detector
+from src.detector import YOLOv11Detector
 from src import config
 from src import utils
 
@@ -20,7 +20,7 @@ from src import utils
 def parse_arguments():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="YOLOv8 Object Detection System",
+        description="YOLOv11 Object Detection System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -40,16 +40,13 @@ Examples:
   python app.py --webcam --fullscreen
 
   # Use custom model and confidence threshold
-  python app.py --input data/image.jpg --model models/yolov8s.pt --conf 0.5
+  python app.py --input data/image.jpg --model models/yolov11s.pt --conf 0.5
 
-  # Enable emotion detection for human faces
+  # Enable Test Time Augmentation for improved accuracy
   python app.py --webcam --tta
 
-  # Use basic emotion detection
-  python app.py --webcam --basic-emotion
-
-  # Disable emotion detection
-  python app.py --webcam --no-emotion
+  # Use ensemble models for improved accuracy
+  python app.py --input data/image.jpg --ensemble-models models/yolov11s.pt models/yolov11m.pt
         """
     )
     
@@ -87,7 +84,7 @@ Examples:
         "--model", "-m",
         type=str,
         default=str(config.MODEL_PATH),
-        help=f"Path to YOLOv8 model (default: {config.MODEL_PATH})"
+        help=f"Path to YOLOv11 model (default: {config.MODEL_PATH})"
     )
     parser.add_argument(
         "--conf", "-c",
@@ -125,18 +122,6 @@ Examples:
         help="Disable improved accuracy features"
     )
     
-    # Emotion detection settings
-    parser.add_argument(
-        "--no-emotion",
-        action="store_true",
-        help="Disable emotion detection for human faces"
-    )
-    parser.add_argument(
-        "--basic-emotion",
-        action="store_true",
-        help="Use basic emotion detection instead of advanced"
-    )
-    
     # Webcam settings
     parser.add_argument(
         "--webcam-index",
@@ -148,6 +133,18 @@ Examples:
         "--fullscreen",
         action="store_true",
         help="Display webcam detection in full screen mode"
+    )
+    parser.add_argument(
+        "--target-fps",
+        type=int,
+        default=config.TARGET_FPS,
+        help=f"Target FPS for webcam detection (default: {config.TARGET_FPS})"
+    )
+    parser.add_argument(
+        "--frame-skip",
+        type=int,
+        default=config.FRAME_SKIP,
+        help=f"Number of frames to skip between detections (default: {config.FRAME_SKIP})"
     )
     
     return parser.parse_args()
@@ -198,7 +195,7 @@ def determine_input_type(input_path: str) -> str:
 
 
 def main():
-    """Main function to run the YOLOv8 object detection system."""
+    """Main function to run the YOLOv11 object detection system."""
     args = parse_arguments()
     
     # Validate arguments
@@ -215,16 +212,14 @@ def main():
     
     # Initialize detector
     try:
-        print("Initializing YOLOv8 detector...")
-        detector = YOLOv8Detector(
+        print("Initializing YOLOv11 detector...")
+        detector = YOLOv11Detector(
             model_path=args.model,
             confidence_threshold=args.conf,
             nms_threshold=args.nms,
             ensemble_models=args.ensemble_models,
             use_tta=args.tta,
-            calibration_factor=args.calibration_factor,
-            enable_emotion_detection=not args.no_emotion,
-            advanced_emotion=not args.basic_emotion
+            calibration_factor=args.calibration_factor
         )
         print("Detector initialized successfully!")
     except Exception as e:
@@ -233,12 +228,26 @@ def main():
     
     # Process based on input type
     if args.webcam:
-        print("Starting webcam detection...")
+        print("=" * 60)
+        print("YOLOv11 Webcam Detection")
+        print("=" * 60)
+        print("Starting webcam detection with YOLOv11 optimizations...")
+        print("Controls:")
+        print("  - Press 'q' to quit")
+        print("  - Press 'f' to toggle fullscreen")
+        print("  - Press 's' to save screenshot")
+        print()
+        
         output_path = Path(args.output) if args.output else None
+        if output_path:
+            print(f"Recording video to: {output_path}")
+        
         detector.detect_webcam(
             webcam_index=args.webcam_index,
             output_path=output_path,
-            fullscreen=args.fullscreen
+            fullscreen=args.fullscreen,
+            target_fps=args.target_fps,
+            frame_skip=args.frame_skip
         )
     
     elif args.input:
@@ -276,8 +285,7 @@ def main():
             result = detector.detect_video(
                 input_path,
                 output_path,
-                show_result=args.show,
-                use_improved_accuracy=not args.no_improved_accuracy
+                show_result=args.show
             )
             
             if "error" not in result:

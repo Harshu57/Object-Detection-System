@@ -1,5 +1,5 @@
 """
-Configuration settings for YOLOv8 Object Detection System
+Configuration settings for YOLOv11 Object Detection System
 """
 
 import os
@@ -17,8 +17,12 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 MODELS_DIR.mkdir(exist_ok=True)
 
 # Model configuration
-DEFAULT_MODEL = "yolov8n.pt"  # Default YOLOv8 nano model
+DEFAULT_MODEL = "yolov8n.pt"  # Default YOLOv8 nano model (fallback from YOLOv11)
 MODEL_PATH = MODELS_DIR / DEFAULT_MODEL
+
+# YOLOv11 model configuration (when available)
+YOLOV11_MODEL = "yolov11n.pt"
+YOLOV11_MODEL_PATH = MODELS_DIR / YOLOV11_MODEL
 
 # Detection settings
 CONFIDENCE_THRESHOLD = 0.25  # Minimum confidence for detection
@@ -53,5 +57,12 @@ VIDEO_FOURCC = 'mp4v'  # Video codec for output
 
 # Webcam settings
 WEBCAM_INDEX = 0  # Default webcam index
-WEBCAM_WIDTH = 640
-WEBCAM_HEIGHT = 480 
+WEBCAM_WIDTH = 640  # Optimized for FPS
+WEBCAM_HEIGHT = 480  # Optimized for FPS
+WEBCAM_FPS = 30  # Target FPS
+WEBCAM_BUFFER_SIZE = 1  # Minimize buffer for lower latency
+
+# FPS optimization settings
+TARGET_FPS = 30  # Target FPS for webcam detection
+FRAME_SKIP = 1  # Number of frames to skip between detections
+MAX_FRAME_TIME = 0.033  # Maximum frame time (30 FPS = 33ms) 

@@ -131,4 +131,10 @@ Thumbs.db
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp
+
+# Screenshots and test outputs
+webcam_screenshot_*.jpg
+webcam_screenshot_*.png
+screenshot_*.jpg
+screenshot_*.png 
